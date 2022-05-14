@@ -16,9 +16,16 @@ const client = new MongoClient(uri);
 async function run() {
   try {
     await client.connect();
+
+    // service collection
     const serviceCollection = client
       .db("doctors_portal")
       .collection("services");
+
+    // booking collection
+    const bookingCollection = client
+      .db("doctors_portal")
+      .collection("bookings");
 
     // services API
     app.get("/services", async (req, res) => {
@@ -26,6 +33,31 @@ async function run() {
       const cursor = serviceCollection.find(query);
       const result = await cursor.toArray();
       res.send(result);
+    });
+
+    /**
+     * API Naming Convention
+     *
+     * app.get('/booking') //get all booking in this collection. or more than one or by filter
+     * app.get('/booking/:id') //get a specific booking
+     * app.post('/booking') //add a new booking
+     * app.patch('/booking/:id') // update a specific one
+     * app.delete('/booking/:id')
+     */
+
+    app.post("/booking", async (req, res) => {
+      const booking = req.body;
+      const query = {
+        service: booking.service,
+        date: booking.date,
+        patient: booking.patient,
+      };
+      const exists = await bookingCollection.findOne(query);
+      if (exists) {
+        return res.send({ success: false, booking: exists });
+      }
+      const result = await bookingCollection.insertOne(booking);
+      return res.send({ success: true, result });
     });
   } finally {
     // await client.close();
