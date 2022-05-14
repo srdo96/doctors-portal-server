@@ -35,6 +35,9 @@ async function run() {
       res.send(result);
     });
 
+    //Warning:
+    // This is not the proper way to query
+    //After learning more about mongodb. will use aggregate lookup, pipeline, match, group
     app.get("/available", async (req, res) => {
       const date = req.query.date || "May 14, 2022";
 
@@ -52,10 +55,11 @@ async function run() {
         );
         const booked = serviceBookings.map((s) => s.slot);
         const available = service.slots.filter((s) => !booked.includes(s));
-        service.available = available;
+        service.slots = available;
       });
       res.send(services);
     });
+
     /**
      * API Naming Convention
      *
@@ -65,6 +69,13 @@ async function run() {
      * app.patch('/booking/:id') // update a specific one
      * app.delete('/booking/:id')
      */
+
+    app.get("/booking", async (req, res) => {
+      const patientEmail = req.query.patientEmail;
+      const query = { patientEmail: patientEmail };
+      const bookings = await bookingCollection.find(query).toArray();
+      res.send(bookings);
+    });
 
     app.post("/booking", async (req, res) => {
       const booking = req.body;
