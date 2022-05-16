@@ -174,6 +174,10 @@ async function run() {
 
 run().catch(console.dir);
 
+app.get("/", (req, res) => {
+  res.send("Welcome to Doctors portal server!");
+});
+
 app.listen(port, () => {
   console.log("Listening to port -> ", port);
 });
