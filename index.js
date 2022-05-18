@@ -3,6 +3,8 @@ const cors = require("cors");
 require("dotenv").config();
 const jwt = require("jsonwebtoken");
 const { MongoClient } = require("mongodb");
+var nodemailer = require("nodemailer");
+var sgTransport = require("nodemailer-sendgrid-transport");
 
 const port = process.env.PORT || 5000;
 const app = express();
@@ -30,6 +32,45 @@ function verifyJWT(req, res, next) {
     req.decoded = decoded;
     console.log(decoded);
     next();
+  });
+}
+
+var emailSenderOptions = {
+  auth: {
+    api_key: process.env.EMAIL_SENDER_KEY,
+  },
+};
+
+const emailClient = nodemailer.createTransport(sgTransport(emailSenderOptions));
+
+function sendAppointmentEmail(booking) {
+  const { patientEmail, patientName, service, date, slot } = booking;
+
+  var email = {
+    from: process.env.EMAIL_SENDER,
+    to: patientEmail,
+    subject: `Your appointment for ${service} is on ${date} at ${slot} is confirmed`,
+    text: `Your appointment for ${service} is on ${date} at ${slot} is confirmed`,
+    html: `
+    <div>
+    <p>Hello ${patientName},</p>
+    <h3>Your appointment for ${service} is confirmed.</h3>
+    <p>Looking forward to seeing you on ${date} at ${slot}.</p>
+
+    <h3>Our Address</h3>
+    <p>Mirpur-12, Dhaka</p>
+    <p>Bangladesh</p>
+    <a href="https://doctors-portal-f31ef.web.app/">Unsubscribe</a>
+    </div>
+    `,
+  };
+
+  emailClient.sendMail(email, function (err, info) {
+    if (err) {
+      console.log(err);
+    } else {
+      console.log("Message sent: ", info);
+    }
   });
 }
 
@@ -164,16 +205,19 @@ async function run() {
 
     app.post("/booking", async (req, res) => {
       const booking = req.body;
+      console.log(booking);
       const query = {
         service: booking.service,
         date: booking.date,
-        patient: booking.patient,
+        patientEmail: booking.patientEmail,
       };
       const exists = await bookingCollection.findOne(query);
       if (exists) {
         return res.send({ success: false, booking: exists });
       }
       const result = await bookingCollection.insertOne(booking);
+      console.log("Sending email ...");
+      sendAppointmentEmail(booking);
       return res.send({ success: true, result });
     });
 
